@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat by Go programming language</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        #messages {
+            height: 300px;
+            overflow-y: scroll;
+            border: 2px solid #ccc;
+            margin-bottom: 10px;
+        }
+        #input-container {
+            display: flex;
+        }
+        #input-container input, #input-container button {
+            padding: 10px;
+        }
+        #name {
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h2>Chat</h2>
+    <div id="messages"></div>
+    <div id="input-container">
+        <input type="text" id="name" placeholder="Enter your name">
+        <input type="text" id="message" placeholder="Type a message">
+        <button onclick="sendMessage()">Send</button>
+    </div>
+    
+</body>
+</html>
