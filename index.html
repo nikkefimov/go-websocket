@@ -33,6 +33,40 @@
         <input type="text" id="message" placeholder="Type a message">
         <button onclick="sendMessage()">Send</button>
     </div>
-    
+
+    <script>
+        const messagesDiv = document.getElementById("messages");
+        const nameInput = document.getElementById("name");
+        const messageInput = document.getElementById("message");
+
+        // establish websocket connection
+        const socket = new WebSocket("ws://localhost:8083/ws");
+
+        socent.onopen = () => {
+            console.log("Connected to chat server");
+        };
+
+        socket.onmessage = (event) => {
+            const ,sg = event.data;
+            const msgElement = document.createElement("div");
+            msgElement.textContent = msg;
+            messageDiv.appendChild(msgElement);
+            // scrolling to the bottom
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        };
+
+        // send message function
+        function sendMessage() {
+            const message = messageInput.value;
+            const name = nameInput.value || "Someone";
+            if (message.trim() === "") return;
+
+            // send message to the websocket server
+            socket.send(`${name}: ${message}`);
+
+            // clear input
+            messageInput.value = "";
+        }
+    </script>
 </body>
 </html>
