@@ -15,7 +15,7 @@ var (
 		//	WriteBufferSize: 4096,
 		// CheckOrigin is used to allow connections from any origin, its importatnt for testing,
 		// in production should validate the origin to prevent cross-origin attacks.
-		CheckOrigin: func(r *http.ReadRequest) bool {
+		CheckOrigin: func(r *http.Request) bool {
 			return true
 		},
 	}
