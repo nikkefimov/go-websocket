@@ -35,4 +35,24 @@ func main() {
 		// If redis is not available, log the error and stop the app.
 		log.Fatalf("Database connect issue: %v", err)
 	}
+
+	// Create a chat server.
+	chatServer := NewChatServer()
+
+	// Start a goroutine to handle incoming messages and broadcast messages.
+	go chatServer.handleMessages()
+
+	// Set up websocket route to handle connections on /ws path.
+	http.HandleFunc("/ws", chatServer.handleWebSocketConnection)
+
+	// Serve static HTML page for the frontend.
+	http.Handle("/", http.FileServer(http.Dir("./public")))
+
+	// Start the HTTP server to listen for incoming requests on the port 8081.
+	log.Println("Server started on port :8081")
+	err = http.ListenAndServe(":8081", nil)
+	if err != nil {
+		// If server error, log the error and stop the app.
+		log.Fatal(err)
+	}
 }
