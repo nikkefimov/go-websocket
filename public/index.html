@@ -3,78 +3,86 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat by Go programming language</title>
+    <title>Chat</title>
     <style>
         body {
             font-family: Arial, sans-serif;
+            padding: 10px;
+            background-color: #f4f4f9;
         }
-        #messages {
+        #chat-window {
+            border: 1px solid #ccc;
             height: 300px;
             overflow-y: scroll;
-            border: 2px solid #ccc;
-            margin-bottom: 10px;
-        }
-        #input-container {
-            display: flex;
-        }
-        #input-container input, #input-container button {
             padding: 10px;
+            margin-bottom: 10px;
+            background-color: white;
         }
-        #name {
+        #message-form {
+            display: flex;
+            margin-top: 10px;
+        }
+        #message-input {
+            flex-grow: 1;
+            padding: 5px;
             margin-right: 10px;
+        }
+        #send-button {
+            padding: 5px 10px;
         }
     </style>
 </head>
 <body>
-    <h2>Chat</h2>
-    <div id="messages"></div>
-    <div id="input-container">
-        <input type="text" id="name" placeholder="Enter your name">
-        <input type="text" id="message" placeholder="Type a message">
-        <button onclick="sendMessage()">Send</button>
-    </div>
 
-    <script>
-        const messagesDiv = document.getElementById("messages");
-        const nameInput = document.getElementById("name");
-        const messageInput = document.getElementById("message");
+<h1>Chat</h1>
+<p>Messages:</p>
 
-        // establish websocket connection
-        const socket = new WebSocket("ws://localhost:8081/ws");
+<div id="chat-window"></div>
 
-        socent.onopen = () => {
-            console.log("Connected to the chat server");
-        };
+<form id="message-form">
+    <input type="text" id="name-input" placeholder="Your name" required>
+    <input type="text" id="message-input" placeholder="Enter a message" required>
+    <button type="submit" id="send-button">Send</button>
+</form>
 
-        // incoming messages fom the WebSocket server
-        socket.onmessage = (event) => {
-            const ,sg = event.data;
-            const msgElement = document.createElement("div");
-            msgElement.textContent = msg;
-            messageDiv.appendChild(msgElement);
-            // scrolling to the bottom
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
-        };
+<script>
+    // Open WebSocket connection to the server
+    const socket = new WebSocket('ws://localhost:8080/ws');
 
-        // send message function
-        function sendMessage() {
-            const message = messageInput.value;
-            const name = nameInput.value || "Someone";
-            if (message.trim() === "") return;
+    socket.onopen = () => {
+        console.log("Connected to the chat server");
+    };
 
-            // send message to the websocket server
-            socket.send(`${name}: ${message}`);
+    socket.onmessage = (event) => {
+        // When a new message is received, display it in the chat window
+        const message = document.createElement('div');
+        message.textContent = event.data;
+        document.getElementById('chat-window').appendChild(message);
+        document.getElementById('chat-window').scrollTop = document.getElementById('chat-window').scrollHeight;
+    };
 
-            // clear input
-            messageInput.value = "";
+    socket.onclose = () => {
+        console.log("Disconnected from the chat server");
+    };
+
+    // Handle the message form submission
+    document.getElementById('message-form').addEventListener('submit', (event) => {
+        event.preventDefault();
+
+        const name = document.getElementById('name-input').value.trim();
+        const message = document.getElementById('message-input').value.trim();
+
+        if (name && message) {
+            const messageToSend = `${name}: ${message}`;
+
+            // Send the message to the server through WebSocket
+            socket.send(messageToSend);
+
+            // Clear the message input
+            document.getElementById('message-input').value = '';
         }
+    });
+</script>
 
-        // display messages
-        function displayMessage(message) {
-            const chanWindow = document.getElementById("chatWindow");
-            const messageElement = document.createElement("div");
-            messageElement.textContent = message;
-            chatWindow.appendChild(messageElement);
-    </script>
 </body>
 </html>

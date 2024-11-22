@@ -2,103 +2,87 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
-	"sync"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
 
-type ChatServer struct {
-	// Map with users's active websocket connections,
-	// each key is a websocket connection
-	// and the value is a boolean indicating whether the connection is active.
-	clients map[*websocket.Conn]bool
-	// Broadcast channel is uset to send messages to all connected users.
-	broadcast chan string
-	// "mu" is a mutex used to synchronize access to the users map (thread-safety).
-	mu sync.Mutex
-}
-
-// NewChatServer creates and returns a new instance of ChatServer.
-func NewChatServer() *ChatServer {
-	return &ChatServer{
-		// Initialize the map to keep track of active users.
-		clients: make(map[*websocket.Conn]bool),
-		// Creating a new channel for broadcasting messages.
-		broadcast: make(chan string),
+// PushMessageToRedis pushes the message to Redis with users and messages IDs.
+func PushMessageToRedis(userID, messageID, message string) error {
+	ctx := context.Background()
+	// Store the message in Redis under a list 'chat:messages' with format "userID:messageID:message".
+	err := redisClient.LPush(ctx, "chat:messages", fmt.Sprintf("%s:%s:%s", userID, messageID, message)).Err()
+	if err != nil {
+		log.Println("Error pushing message to Redis:", err)
+		return err
 	}
+	return nil
 }
 
-// Handler for listening messages.
-// handleMessages listens for incoming messages on the broadcast channel
-// and send them to all connected users.
-func (cs *ChatServer) handleMessages() {
-	// Loop indefinitely to handle the messages.
-	for {
-		// Get the next message from the broadcast channel.
-		msg := <-cs.broadcast
-		// Lock the users map to prevent race conditions while message is sending.
-		cs.mu.Lock()
-		// Loop over all users and send the message to them.
-		for client := range cs.clients {
-			err := client.WriteMessage(websocket.TextMessage, []byte(msg))
-			// If an error here while sending the message, log it and close the connection.
-			if err != nil {
-				log.Printf("Error sending message: %v", err)
-				client.Close()
-				// Remove the user from the users map.
-				delete(cs.clients, client)
-			}
-		}
-		// Unlock the users map after sending messages.
-		cs.mu.Lock()
-	}
-}
-
-// Handler for incoming websocket connection from a user.
-func (cs *ChatServer) handleWebSocketConnection(w http.ResponseWriter, r *http.Request) {
-	// Upgrade the HTTP request to a websocket connection.
+// HandleWebSocket handles the websocket connection, reads incoming messages, and broadcasts them.
+func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
+	// Upgrade the HTTP connection to a websocket connection.
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Println(err)
+		log.Println("Failed to upgrade WebSocket:", err)
 		return
 	}
-	// Lock the users map before modifying it.
-	cs.mu.Lock()
-	// Add the new conncetion to the users's map.
-	cs.clients[conn] = true
-	// Unlock users's map after modification.
-	cs.mu.Unlock()
+	defer conn.Close()
 
-	// Ensure the websocket connection is closed when the function exits.
-	defer func() {
-		cs.mu.Lock()
-		delete(cs.clients, conn)
-		cs.mu.Unlock()
-		conn.Close()
-	}()
+	// Generate unique IDs for each user.
+	userID := fmt.Sprintf("%d", time.Now().UnixNano()) // A simple unique user ID based on time.
+	log.Printf("User connected with ID: %s", userID)
 
-	// Listen messages from the user.
+	// Add user connection to clients map, it allows to watch self messages which user sends.
+	clients[conn] = true
+	defer delete(clients, conn)
+
+	// Read messages from the websocket and store them in database.
 	for {
-		// Read a message from the websocket connection.
-		_, msg, err := conn.ReadMessage()
+		// Read the websocket message. This will return three values:
+		// 1. Message type (will ignore it by using _ in loop),
+		// 2. The message content (which is the byte slice),
+		// 3. Error (if any error exists).
+		_, message, err := conn.ReadMessage() // This reads the message content into the "message" variable.
 		if err != nil {
-			log.Println("User disconnected:", err)
-			// If error or user disconnected than break the loop.
+			log.Println("Error reading message:", err)
 			break
 		}
 
-		// Broadcast the message to all connected users.
-		cs.broadcast <- string(msg)
+		// Convert the byte slice(message) to a string.
+		messageStr := string(message)
 
-		// Save the message to redis, ensure all messages are available in the system.
-		go func() {
-			// Publish the message to the Redis channel "chat:messages".
-			err := redisClient.Publish(context.Background(), "chat:messages", msg).Err()
-			if err != nil {
-				log.Printf("Error database: %v", err)
-			}
-		}()
+		// Log the message with the user ID.
+		log.Printf("User %s sent message: %s", userID, messageStr)
+
+		// Generate a unique message ID, by using timestamp or random ID.
+		messageID := fmt.Sprintf("%d", time.Now().UnixNano())
+		log.Printf("Message ID: %s", messageID)
+
+		// Push the message to database (implement PushMessageToRedis).
+		if err := PushMessageToRedis(userID, messageID, messageStr); err != nil {
+			log.Println("Error pushing message to Redis:", err)
+		}
+
+		// Broadcast the message to all connected users.
+		broadcastMessageToClients(messageStr, userID, messageID)
+	}
+}
+
+// Broadcast to all connected users.
+var clients = make(map[*websocket.Conn]bool)
+
+func broadcastMessageToClients(message, userID, messageID string) {
+	for client := range clients {
+		// Send message to the user.
+		err := client.WriteMessage(websocket.TextMessage, []byte(message))
+		if err != nil {
+			log.Printf("Error sending message to client %s: %v", userID, err)
+			client.Close()
+			delete(clients, client) // Remove disconnected client from the map.
+		}
 	}
 }
