@@ -79,22 +79,22 @@ func (cs *ChatServer) handleWebSocketConnection(w http.ResponseWriter, r *http.R
 		conn.Close()
 	}()
 
-	// Listen messages from the user
+	// Listen messages from the user.
 	for {
-		// Read a message from the websocket connection
+		// Read a message from the websocket connection.
 		_, msg, err := conn.ReadMessage()
 		if err != nil {
 			log.Println("User disconnected:", err)
-			// If error or user disconnected than break the loop
+			// If error or user disconnected than break the loop.
 			break
 		}
 
-		// Broadcast the message to all connected users
+		// Broadcast the message to all connected users.
 		cs.broadcast <- string(msg)
 
 		// Save the message to redis, ensure all messages are available in the system.
 		go func() {
-			// Publish the message to the Redis channel "chat:messages"
+			// Publish the message to the Redis channel "chat:messages".
 			err := redisClient.Publish(context.Background(), "chat:messages", msg).Err()
 			if err != nil {
 				log.Printf("Error database: %v", err)
