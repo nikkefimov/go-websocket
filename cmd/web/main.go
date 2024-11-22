@@ -27,8 +27,8 @@ func main() {
 	http.HandleFunc("/ws", HandleWebSocket)
 
 	// Launch the HTTP server.
-	log.Println("Starting WebSocket server on :8080")
-	if err := http.ListenAndServe(":8080", nil); err != nil {
+	log.Println("Starting WebSocket server on :8081")
+	if err := http.ListenAndServe(":8081", nil); err != nil {
 		log.Fatalf("Error starting server: %v", err)
 	}
 }
