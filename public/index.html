@@ -46,7 +46,7 @@
 </form>
 
 <script>
-    // Open WebSocket connection to the server
+    // Websocket connection for server.
     const socket = new WebSocket('ws://localhost:8081/ws');
 
     socket.onopen = () => {
@@ -54,7 +54,7 @@
     };
 
     socket.onmessage = (event) => {
-        // When a new message is received, display it in the chat window
+        // Display received new message in chat window.
         const message = document.createElement('div');
         message.textContent = event.data;
         document.getElementById('chat-window').appendChild(message);
@@ -65,20 +65,21 @@
         console.log("Disconnected from the chat server");
     };
 
-    // Handle the message form submission
+    // Processing the message form submission.
     document.getElementById('message-form').addEventListener('submit', (event) => {
         event.preventDefault();
 
+        // Input forms for "name" and "message".
         const name = document.getElementById('name-input').value.trim();
         const message = document.getElementById('message-input').value.trim();
 
         if (name && message) {
             const messageToSend = `${name}: ${message}`;
 
-            // Send the message to the server through WebSocket
+            // Send the message to the server through websocket.
             socket.send(messageToSend);
 
-            // Clear the message input
+            // Clear the message input, after sending.
             document.getElementById('message-input').value = '';
         }
     });
