@@ -15,10 +15,22 @@ var upgrader = websocket.Upgrader{
 		return true
 	},
 }
+var clients = make(map[*websocket.Conn]bool) // To keep track of connected clients.
+var broadcast = make(chan Message)           // Channel for broadcasting messages.
+
+// Message structure for broadcast
+type Message struct {
+	UserID    string `json:"user_id"`
+	MessageID string `json:"message_id"`
+	Message   string `json:"message"`
+}
 
 func main() {
 	// Initialize database.
 	initRedis()
+
+	// Start broadcsting goroutine.
+	go handleBroadcast()
 
 	// Serve static pages.
 	http.Handle("/", http.FileServer(http.Dir("./public")))

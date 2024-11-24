@@ -10,7 +10,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-// PushMessageToRedis pushes the message to Redis with users and messages IDs.
+// PushMessageToRedis pushes the message to redis with users and messages IDs.
 func PushMessageToRedis(userID, messageID, message string) error {
 	ctx := context.Background()
 	// Store the message in Redis under a list 'chat:messages' with format "userID:messageID:message".
@@ -58,7 +58,7 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		// Log the message with the user ID.
 		log.Printf("User %s sent message: %s", userID, messageStr)
 
-		// Generate a unique message ID, by using timestamp or random ID.
+		// Generate a unique message ID, by using timestamp and random ID.
 		messageID := fmt.Sprintf("%d", time.Now().UnixNano())
 		log.Printf("Message ID: %s", messageID)
 
@@ -67,22 +67,29 @@ func HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 			log.Println("Error pushing message to Redis:", err)
 		}
 
-		// Broadcast the message to all connected users.
-		broadcastMessageToClients(messageStr, userID, messageID)
+		// Send message to the broadcast channel
+		broadcast <- Message{
+			UserID:    userID,
+			MessageID: messageID,
+			Message:   messageStr,
+		}
 	}
 }
 
-// Broadcast to all connected users.
-var clients = make(map[*websocket.Conn]bool)
+// Func runs own goruutine and broadcast to all connected users.
+func handleBroadcast() {
+	for {
+		// Receive a message from the broadcast channel.
+		message := <-broadcast
 
-func broadcastMessageToClients(message, userID, messageID string) {
-	for client := range clients {
-		// Send message to the user.
-		err := client.WriteMessage(websocket.TextMessage, []byte(message))
-		if err != nil {
-			log.Printf("Error sending message to client %s: %v", userID, err)
-			client.Close()
-			delete(clients, client) // Remove disconnected client from the map.
+		// Send the message to all connected users.
+		for client := range clients {
+			err := client.WriteMessage(websocket.TextMessage, []byte(message.Message))
+			if err != nil {
+				log.Printf("Error sending message to client %s: %v", message.UserID, err)
+				client.Close()
+				delete(clients, client) // Remove disconnected client from the list.
+			}
 		}
 	}
 }
