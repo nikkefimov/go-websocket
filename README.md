@@ -10,7 +10,11 @@ Hi! It's a real-time chat server, at the same time a large number of users can r
 - Catching runtime errors.
 
 ### Execute app (mac)
-You have to install: Go, Redis(v8), Gorilla/Websocket. Before execute "go run" make sure, that you run "redis-server", after launch application, you can check connection with Redis server with command in terminal "netstat -an | grep 6379".
+You have to install:
+- Go (https://go.dev/doc/install)
+- Redis v8 (https://github.com/redis/go-redis)
+- Gorilla/Websocket (https://github.com/gorilla/websocket)
+ Make sure, that you run "redis-server", after launch application, you can check connection with Redis server with command in terminal "netstat -an | grep 6379".
 
 ##### `1 redis-cli ping (answer: PONG)`
 ##### `2 redis-server`

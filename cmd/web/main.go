@@ -29,7 +29,7 @@ func main() {
 	// Initialize database.
 	initRedis()
 
-	// Start broadcsting goroutine.
+	// Start broadcasting goroutine.
 	go handleBroadcast()
 
 	// Serve static pages.
